@@ -1,36 +1,38 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { toast } from "sonner"
+import { toast } from 'sonner'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle } from 'lucide-react'
 
 import PokemonTypeSelector from "@/components/pokemon-type-selector"
 import ReportsTable from "@/components/reports-table"
 import { getPokemonTypes } from "@/services/pokemon-service"
-import { getReports, createReport, deleteReport } from "@/services/report-service"
+import { getReports, createReport } from "@/services/report-service"
 
 export default function PokemonReportsPage() {
   const [pokemonTypes, setPokemonTypes] = useState([])
   const [reports, setReports] = useState([])
   const [loadingTypes, setLoadingTypes] = useState(true)
   const [loadingReports, setLoadingReports] = useState(true)
+  const [creatingReport, setCreatingReport] = useState(false)
   const [error, setError] = useState(null)
   const [selectedType, setSelectedType] = useState("")
 
-  // Cargar tipos de Pokémon
+  // Cargar los tipos de Pokémon
   useEffect(() => {
     const loadPokemonTypes = async () => {
       try {
         setLoadingTypes(true)
+        setError(null)
         const types = await getPokemonTypes()
         setPokemonTypes(types)
+        setLoadingTypes(false)
       } catch (error) {
         console.error("Error loading Pokemon types:", error)
         setError("Error al cargar los tipos de Pokémon. Por favor, intenta de nuevo más tarde.")
-      } finally {
         setLoadingTypes(false)
       }
     }
@@ -38,45 +40,71 @@ export default function PokemonReportsPage() {
     loadPokemonTypes()
   }, [])
 
-  // Cargar reportes
+  // Función para cargar los reportes
+  const loadReports = async () => {
+    try {
+      setLoadingReports(true)
+      setError(null)
+      const reportData = await getReports()
+      setReports(reportData)
+      setLoadingReports(false)
+      return reportData
+    } catch (error) {
+      console.error("Error loading reports:", error)
+      setError("Error al cargar los reportes. Por favor, intenta de nuevo más tarde.")
+      setLoadingReports(false)
+      throw error
+    }
+  }
+
+  // Función para refrescar la tabla
+  const handleRefreshTable = async () => {
+    try {
+      await loadReports()
+      return true
+    } catch (error) {
+      throw error
+    }
+  }
+
+  // Cargar los reportes al iniciar
   useEffect(() => {
     loadReports()
   }, [])
 
-  const loadReports = async () => {
+  // Función para capturar todos los Pokémon del tipo seleccionado
+  const catchThemAll = async () => {
+    if (!selectedType) return
+
     try {
-      setLoadingReports(true)
-      const reportData = await getReports()
-      setReports(reportData)
+      setCreatingReport(true)
+
+      // Crear un nuevo reporte usando la API
+      await createReport(selectedType)
+
+      // Mostrar notificación de éxito
+      toast.success(`Se ha generado un nuevo reporte para el tipo ${selectedType}.`)
+
+      // Refrescar la tabla para mostrar el nuevo reporte
+      await loadReports()
+
+      setCreatingReport(false)
     } catch (error) {
-      console.error("Error loading reports:", error)
-      setError("Error al cargar los reportes. Por favor, intenta de nuevo más tarde.")
-    } finally {
-      setLoadingReports(false)
+      console.error("Error creating report:", error)
+
+      // Mostrar notificación de error
+      toast.error("No se pudo crear el reporte. Por favor, intenta de nuevo.")
+
+      setCreatingReport(false)
     }
   }
 
-  const handleRefreshTable = async () => {
-    await loadReports()
-  }
-
+  // Función para descargar el CSV
   const handleDownloadCSV = (url) => {
     window.open(url, "_blank")
   }
 
-  const handleCreated = (newReport) => {
-    setReports((prev) => [...prev, newReport])
-    toast.success(`Se ha generado un nuevo reporte para el tipo ${newReport.pokemonType}.`)
-  }
-
-  const handleDeleted = async (id) => {
-    try {
-      await deleteReport(id)
-      setReports((prev) => prev.filter((r) => r.reportId !== id))
-    } catch (err) {
-      toast.error("No se pudo eliminar el reporte.")
-    }
-  }
+  const isLoading = loadingTypes || loadingReports
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -94,14 +122,22 @@ export default function PokemonReportsPage() {
           )}
 
           <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="w-full">
+            <div className="w-full md:w-2/3">
               <PokemonTypeSelector
                 pokemonTypes={pokemonTypes}
                 selectedType={selectedType}
                 onTypeChange={setSelectedType}
                 loading={loadingTypes}
-                onCreated={handleCreated}
               />
+            </div>
+            <div className="w-full md:w-1/3">
+              <Button
+                onClick={catchThemAll}
+                disabled={!selectedType || isLoading || creatingReport}
+                className="w-full font-bold"
+              >
+                {creatingReport ? "Creating..." : isLoading ? "Loading..." : "Catch them all!"}
+              </Button>
             </div>
           </div>
 
@@ -110,7 +146,6 @@ export default function PokemonReportsPage() {
             loading={loadingReports}
             onRefresh={handleRefreshTable}
             onDownload={handleDownloadCSV}
-            onDelete={handleDeleted}
           />
         </CardContent>
       </Card>

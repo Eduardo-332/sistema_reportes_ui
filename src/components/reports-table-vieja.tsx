@@ -4,22 +4,13 @@ import { useState, useEffect } from "react"
 import { Download, RefreshCw, ArrowUpDown } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
 
-export default function ReportsTable({ reports, loading, onRefresh, onDownload, onDelete }) {
+export default function ReportsTable({ reports, loading, onRefresh, onDownload }) {
   const [refreshing, setRefreshing] = useState(false)
   const [sortedReports, setSortedReports] = useState([])
   const [sortDirection, setSortDirection] = useState("desc") // "desc" para descendente (más reciente primero)
-  const [confirmingId, setConfirmingId] = useState(null)
 
   // Ordenar los reportes cuando cambian o cuando cambia la dirección de ordenamiento
   useEffect(() => {
@@ -28,50 +19,68 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload, 
       return
     }
 
+    // Crear una copia para no modificar el array original
     const reportsCopy = [...reports]
+
+    // Ordenar por el campo "updated"
     const sorted = reportsCopy.sort((a, b) => {
       const dateA = new Date(getPropertyValue(a, "updated"))
       const dateB = new Date(getPropertyValue(b, "updated"))
+
+      // Verificar si las fechas son válidas
       const isValidDateA = !isNaN(dateA.getTime())
       const isValidDateB = !isNaN(dateB.getTime())
 
+      // Si ambas fechas son válidas, compararlas
       if (isValidDateA && isValidDateB) {
         return sortDirection === "desc" ? dateB - dateA : dateA - dateB
       }
+
+      // Si solo una fecha es válida, ponerla primero
       if (isValidDateA) return sortDirection === "desc" ? -1 : 1
       if (isValidDateB) return sortDirection === "desc" ? 1 : -1
+
+      // Si ninguna fecha es válida, mantener el orden original
       return 0
     })
 
     setSortedReports(sorted)
   }, [reports, sortDirection])
 
+  // Función para cambiar la dirección de ordenamiento
   const toggleSortDirection = () => {
     setSortDirection((prev) => (prev === "desc" ? "asc" : "desc"))
   }
 
+  // Función para obtener el valor de una propiedad, manejando diferentes estructuras de datos
   const getPropertyValue = (obj, prop) => {
+    // Si la propiedad existe directamente
     if (obj[prop] !== undefined) {
       return obj[prop]
     }
 
+    // Si la propiedad está en camelCase o en formato diferente
     const propLower = prop.toLowerCase()
     const keys = Object.keys(obj)
 
+    // Buscar una propiedad que coincida ignorando mayúsculas/minúsculas
     for (const key of keys) {
       if (key.toLowerCase() === propLower) {
         return obj[key]
       }
     }
 
+    // Si no se encuentra, devolver un valor por defecto
     return "N/A"
   }
 
+  // Verificar si el status es "completed"
   const isStatusCompleted = (report) => {
     const status = getPropertyValue(report, "status")
     return status && status.toLowerCase() === "completed"
   }
 
+  // Manejar la descarga del CSV
   const handleDownload = (report) => {
     const url = getPropertyValue(report, "url")
     if (!url || url === "N/A") {
@@ -81,6 +90,7 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload, 
     onDownload(url)
   }
 
+  // Manejar el refresco de la tabla
   const handleRefresh = async () => {
     try {
       setRefreshing(true)
@@ -90,22 +100,6 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload, 
       toast.error("No se pudieron actualizar los reportes. Por favor, intenta de nuevo.")
     } finally {
       setRefreshing(false)
-    }
-  }
-
-  const handleDelete = async (reportId) => {
-    if (confirmingId !== reportId) {
-      setConfirmingId(reportId)
-      return
-    }
-
-    try {
-      await onDelete(reportId)
-      toast.success("Reporte eliminado correctamente")
-    } catch (error) {
-      toast.error("Error al eliminar el reporte")
-    } finally {
-      setConfirmingId(null)
     }
   }
 
@@ -156,9 +150,10 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload, 
               <TableHead className="w-[120px]">Status</TableHead>
               <TableHead className="w-[150px]">PokemonType</TableHead>
               <TableHead className="w-[200px]">Created</TableHead>
-              <TableHead className="w-[200px]">Updated</TableHead>
-              <TableHead className="w-[80px]">Download</TableHead>
-              <TableHead className="w-[80px]">Delete</TableHead>
+              <TableHead className="w-[200px]">
+                <div className="flex items-center">Updated</div>
+              </TableHead>
+              <TableHead className="w-[80px]">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -182,25 +177,8 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload, 
                   <TableCell>{getPropertyValue(report, "updated")}</TableCell>
                   <TableCell>
                     {isStatusCompleted(report) && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDownload(report)}
-                        title="Download CSV"
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => handleDownload(report)} title="Download CSV">
                         <Download className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {isStatusCompleted(report) && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(getPropertyValue(report, "reportId"))}
-                        title="Eliminar Reporte"
-                      >
-                        {confirmingId === getPropertyValue(report, "reportId") ? "❗" : "🗑️"}
                       </Button>
                     )}
                   </TableCell>
@@ -208,7 +186,7 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload, 
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-4">
+                <TableCell colSpan={6} className="text-center py-4">
                   No reports available
                 </TableCell>
               </TableRow>

@@ -1,11 +1,38 @@
 "use client"
 
+import { useState } from "react"
+import { createReport } from "@/services/report-service"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
 
-export default function PokemonTypeSelector({ pokemonTypes, selectedType, onTypeChange, loading }) {
+export default function PokemonTypeSelector({
+  pokemonTypes,
+  selectedType,
+  onTypeChange,
+  loading,
+  onCreated,
+}) {
+  const [sampleSize, setSampleSize] = useState("")
+  const [creating, setCreating] = useState(false)
+
+  const handleCreateReport = async () => {
+    if (!selectedType) return
+    try {
+      setCreating(true)
+      const report = await createReport(selectedType, sampleSize)
+      onCreated(report)
+      setSampleSize("")
+    } catch (error) {
+      console.error("Error creando el reporte", error)
+    } finally {
+      setCreating(false)
+    }
+  }
+
   return (
-    <div className="w-full">
+    <div className="space-y-4 w-full">
+      {/* Selector de tipo */}
       {loading ? (
         <Skeleton className="h-10 w-full" />
       ) : (
@@ -22,6 +49,21 @@ export default function PokemonTypeSelector({ pokemonTypes, selectedType, onType
           </SelectContent>
         </Select>
       )}
+
+      {/* Campo de muestreo aleatorio */}
+      <input
+        type="number"
+        min="1"
+        className="w-full border rounded px-3 py-2"
+        placeholder="Número máximo de registros (opcional)"
+        value={sampleSize}
+        onChange={(e) => setSampleSize(e.target.value)}
+      />
+
+      {/* Botón */}
+      <Button onClick={handleCreateReport} disabled={!selectedType || creating}>
+        {creating ? "Generando..." : "Generar Reporte"}
+      </Button>
     </div>
   )
 }

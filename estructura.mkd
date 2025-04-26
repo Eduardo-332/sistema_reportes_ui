@@ -1,0 +1,22 @@
+src
+    app
+        favicon.ico
+        globals.css
+        layout.js 
+        page.js
+    components
+        ui
+            alert.jsx
+            button.jsx
+            card.jsx
+            select.jsx
+            skeleton.jsx
+            table.jsx
+        pokemon-type-selector.jsx
+        reports-table.jsx
+    lib
+        settings.js
+        utils.js
+    services
+        pokemon-service.js
+        report-service.js
