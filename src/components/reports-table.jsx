@@ -148,7 +148,7 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload, 
           <TableBody>
             {sortedReports.length > 0 ? (
               sortedReports.map((report, index) => (
-                <TableRow key={getPropertyValue(report, "reportId") || index}>
+                <TableRow key={getPropertyValue(report, "reportId") !== "N/A" ? getPropertyValue(report, "reportId") : `index-${index}`}>
                   <TableCell>{getPropertyValue(report, "reportId")}</TableCell>
                   <TableCell>
                     <span
@@ -200,6 +200,7 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload, 
               </TableRow>
             )}
           </TableBody>
+
         </Table>
       )}
 
