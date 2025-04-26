@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Download, RefreshCw, ArrowUpDown } from "lucide-react"
+import { Download, RefreshCw, ArrowUpDown, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,22 +14,23 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function ReportsTable({ reports, loading, onRefresh, onDownload, onDelete }) {
   const [refreshing, setRefreshing] = useState(false)
   const [sortedReports, setSortedReports] = useState([])
-  const [sortDirection, setSortDirection] = useState("desc") // "desc" para descendente (más reciente primero)
-  const [confirmingId, setConfirmingId] = useState(null)
+  const [sortDirection, setSortDirection] = useState("desc")
 
-  // Ordenar los reportes cuando cambian o cuando cambia la dirección de ordenamiento
+  const [modalVisible, setModalVisible] = useState(false)
+  const [reportToDelete, setReportToDelete] = useState(null)
+
   useEffect(() => {
     if (!reports || reports.length === 0) {
       setSortedReports([])
       return
     }
 
-    const reportsCopy = [...reports]
-    const sorted = reportsCopy.sort((a, b) => {
+    const sorted = [...reports].sort((a, b) => {
       const dateA = new Date(getPropertyValue(a, "updated"))
       const dateB = new Date(getPropertyValue(b, "updated"))
       const isValidDateA = !isNaN(dateA.getTime())
@@ -51,20 +52,11 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload, 
   }
 
   const getPropertyValue = (obj, prop) => {
-    if (obj[prop] !== undefined) {
-      return obj[prop]
-    }
+    if (obj[prop] !== undefined) return obj[prop]
 
-    const propLower = prop.toLowerCase()
-    const keys = Object.keys(obj)
-
-    for (const key of keys) {
-      if (key.toLowerCase() === propLower) {
-        return obj[key]
-      }
-    }
-
-    return "N/A"
+    const lowerProp = prop.toLowerCase()
+    const foundKey = Object.keys(obj).find((k) => k.toLowerCase() === lowerProp)
+    return foundKey ? obj[foundKey] : "N/A"
   }
 
   const isStatusCompleted = (report) => {
@@ -86,26 +78,28 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload, 
       setRefreshing(true)
       await onRefresh()
       toast.success("Los reportes han sido actualizados correctamente")
-    } catch (error) {
-      toast.error("No se pudieron actualizar los reportes. Por favor, intenta de nuevo.")
+    } catch {
+      toast.error("No se pudieron actualizar los reportes. Intenta de nuevo.")
     } finally {
       setRefreshing(false)
     }
   }
 
-  const handleDelete = async (reportId) => {
-    if (confirmingId !== reportId) {
-      setConfirmingId(reportId)
-      return
-    }
+  const askDelete = (report) => {
+    setReportToDelete(report)
+    setModalVisible(true)
+  }
 
+  const confirmDelete = async () => {
+    const id = getPropertyValue(reportToDelete, "reportId")
     try {
-      await onDelete(reportId)
-      toast.success("Reporte eliminado correctamente")
-    } catch (error) {
-      toast.error("Error al eliminar el reporte")
+      await onDelete(id)
+      toast.success(`Reporte ${id} eliminado correctamente`)
+    } catch {
+      toast.error("No se pudo eliminar el reporte.")
     } finally {
-      setConfirmingId(null)
+      setModalVisible(false)
+      setReportToDelete(null)
     }
   }
 
@@ -114,17 +108,7 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload, 
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-lg font-medium">Reports</h3>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleSortDirection}
-            className="flex items-center gap-1"
-            title={
-              sortDirection === "desc"
-                ? "Ordenado de más reciente a más antiguo"
-                : "Ordenado de más antiguo a más reciente"
-            }
-          >
+          <Button variant="outline" size="sm" onClick={toggleSortDirection} className="flex items-center gap-1">
             <ArrowUpDown className="h-4 w-4" />
             <span>{sortDirection === "desc" ? "Más reciente primero" : "Más antiguo primero"}</span>
           </Button>
@@ -169,7 +153,9 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload, 
                   <TableCell>
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        isStatusCompleted(report) ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                        isStatusCompleted(report)
+                          ? "bg-green-100 text-green-800"
+                          : "bg-yellow-100 text-yellow-800"
                       }`}
                     >
                       {getPropertyValue(report, "status")}
@@ -197,10 +183,10 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload, 
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDelete(getPropertyValue(report, "reportId"))}
+                        onClick={() => askDelete(report)}
                         title="Eliminar Reporte"
                       >
-                        {confirmingId === getPropertyValue(report, "reportId") ? "❗" : "🗑️"}
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
                   </TableCell>
@@ -215,6 +201,32 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload, 
             )}
           </TableBody>
         </Table>
+      )}
+
+      {/* Modal de confirmación */}
+      {modalVisible && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white shadow-lg rounded-lg max-w-md w-full p-6 animate-in fade-in zoom-in">
+            <div className="mb-4">
+              <Alert variant="destructive">
+                <AlertTitle>¿Eliminar reporte?</AlertTitle>
+                <AlertDescription>
+                  ¿Estás seguro de que deseas eliminar el reporte{" "}
+                  <span className="font-bold">{getPropertyValue(reportToDelete, "reportId")}</span>? Esta acción no se
+                  puede deshacer.
+                </AlertDescription>
+              </Alert>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="ghost" onClick={() => setModalVisible(false)}>
+                Cancelar
+              </Button>
+              <Button variant="destructive" onClick={confirmDelete}>
+                Eliminar
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
