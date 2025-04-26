@@ -15,9 +15,24 @@ export default function PokemonTypeSelector({
 }) {
   const [sampleSize, setSampleSize] = useState("")
   const [creating, setCreating] = useState(false)
+  const [error, setError] = useState("")
+
+  const isValidSampleSize = (value) => {
+    if (value === "") return true // permitir vacío (opcional)
+    const parsed = parseInt(value)
+    return !isNaN(parsed) && parsed > 0
+  }
 
   const handleCreateReport = async () => {
+    setError("")
+
     if (!selectedType) return
+
+    if (!isValidSampleSize(sampleSize)) {
+      setError("El número debe ser un entero positivo.")
+      return
+    }
+
     try {
       setCreating(true)
       const report = await createReport(selectedType, sampleSize)
@@ -25,6 +40,7 @@ export default function PokemonTypeSelector({
       setSampleSize("")
     } catch (error) {
       console.error("Error creando el reporte", error)
+      setError("Ocurrió un error al crear el reporte.")
     } finally {
       setCreating(false)
     }
@@ -51,14 +67,17 @@ export default function PokemonTypeSelector({
       )}
 
       {/* Campo de muestreo aleatorio */}
-      <input
-        type="number"
-        min="1"
-        className="w-full border rounded px-3 py-2"
-        placeholder="Número máximo de registros (opcional)"
-        value={sampleSize}
-        onChange={(e) => setSampleSize(e.target.value)}
-      />
+      <div className="flex flex-col gap-1">
+        <input
+          type="number"
+          min="1"
+          className="w-full border rounded px-3 py-2"
+          placeholder="Número máximo de registros (opcional)"
+          value={sampleSize}
+          onChange={(e) => setSampleSize(e.target.value)}
+        />
+        {error && <p className="text-sm text-red-500">{error}</p>}
+      </div>
 
       {/* Botón */}
       <Button onClick={handleCreateReport} disabled={!selectedType || creating}>
