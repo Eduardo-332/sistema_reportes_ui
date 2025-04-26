@@ -205,29 +205,40 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload, 
 
       {/* Modal de confirmación */}
       {modalVisible && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white shadow-lg rounded-lg max-w-md w-full p-6 animate-in fade-in zoom-in">
-            <div className="mb-4">
-              <Alert variant="destructive">
-                <AlertTitle>¿Eliminar reporte?</AlertTitle>
-                <AlertDescription>
-                  ¿Estás seguro de que deseas eliminar el reporte{" "}
-                  <span className="font-bold">{getPropertyValue(reportToDelete, "reportId")}</span>? Esta acción no se
-                  puede deshacer.
-                </AlertDescription>
-              </Alert>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in space-y-4">
+            
+            {/* Ícono de advertencia */}
+            <div className="flex justify-center">
+              <div className="bg-red-100 text-red-600 rounded-full p-4">
+                <Trash2 className="h-8 w-8" />
+              </div>
             </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="ghost" onClick={() => setModalVisible(false)}>
+
+            {/* Título */}
+            <h2 className="text-center text-xl font-bold text-gray-800">¿Eliminar reporte?</h2>
+
+            {/* Descripción */}
+            <p className="text-center text-gray-600 text-sm">
+              ¿Estás seguro de que deseas eliminar el reporte{" "}
+              <span className="font-semibold">{getPropertyValue(reportToDelete, "reportId")}</span>?<br />
+              Esta acción no se puede deshacer.
+            </p>
+
+            {/* Botones */}
+            <div className="flex justify-center gap-4 pt-2">
+              <Button variant="outline" onClick={() => setModalVisible(false)}>
                 Cancelar
               </Button>
               <Button variant="destructive" onClick={confirmDelete}>
                 Eliminar
               </Button>
             </div>
+
           </div>
         </div>
       )}
+
     </div>
   )
 }
