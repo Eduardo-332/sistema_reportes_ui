@@ -5,6 +5,7 @@ export async function getReports() {
     const response = await fetch(`${settings.URL}/api/request`);
 
     if (!response.ok) {
+      console.log("Fallé")
       throw new Error(`Error: ${response.status} - ${response.statusText}`);
     }
 

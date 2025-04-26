@@ -3,7 +3,19 @@
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 
-export default function ConfirmDialog({ open, title, description, onConfirm, onCancel }) {
+export default function ConfirmDialog({ open, title, description, reportId, onCancel }) {
+  const handleConfirm = async () => {
+    try {
+      await fetch(`https://api-pokequeue-dev-333.azurewebsites.net/api/report/${reportId}`, {
+        method: 'DELETE',
+      })
+      window.location.reload()
+    } catch (error) {
+      console.error("Error deleting report:", error)
+      // Opcional: mostrar mensaje de error
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>
       <DialogContent>
@@ -15,7 +27,7 @@ export default function ConfirmDialog({ open, title, description, onConfirm, onC
           <Button variant="ghost" onClick={onCancel}>
             Cancelar
           </Button>
-          <Button variant="destructive" onClick={onConfirm}>
+          <Button variant="destructive" onClick={handleConfirm}>
             Eliminar
           </Button>
         </DialogFooter>
